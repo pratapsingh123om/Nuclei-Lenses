@@ -48,6 +48,23 @@ The response must contain `"ready": true` before enabling uploads in the
 frontend. If it reports `model_error`, inspect the Render logs for a checkpoint
 architecture or memory mismatch.
 
+### Alternative: automatic HTTPS bundle download
+
+The final notebook cell also creates
+`nuclei_lens_render_model.zip` and a SHA-256 file in the Drive artifact folder.
+Upload the ZIP to a GitHub Release asset or private object storage, then add
+these environment variables in Render:
+
+```text
+NUCLEI_MODEL_BUNDLE_URL=https://your-download-url/model.zip
+NUCLEI_MODEL_BUNDLE_SHA256=the-checksum-printed-by-colab
+```
+
+On startup, the container downloads the bundle over HTTPS, verifies its SHA-256
+checksum and required configuration keys, and atomically installs both files on
+the persistent disk before FastAPI starts. If the files are already on disk,
+the download is skipped.
+
 ## 3. Connect Vercel
 
 Set this variable in the Vercel frontend project:

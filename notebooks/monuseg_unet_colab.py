@@ -44,6 +44,7 @@ from xml.etree import ElementTree as ET
 from collections import defaultdict
 from typing import Any
 import io
+import hashlib
 import json
 import math
 import random
@@ -937,4 +938,19 @@ print(run_report)
 print("Checkpoint for apps/backend/model:", CHECKPOINT)
 print("Configuration for apps/backend/model:", FROZEN_CONFIG)
 print("All reports:", ARTIFACTS)
+
+# %%
+# Package the exact checkpoint/config pair consumed by the Render startup
+# bootstrap. Upload this ZIP to a private object URL or a GitHub Release asset,
+# then set its URL and printed checksum in Render.
+MODEL_BUNDLE = ARTIFACTS / "nuclei_lens_render_model.zip"
+with zipfile.ZipFile(MODEL_BUNDLE, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+    bundle.write(CHECKPOINT, "best_unet.weights.h5")
+    bundle.write(FROZEN_CONFIG, "frozen_config.json")
+bundle_digest = hashlib.sha256(MODEL_BUNDLE.read_bytes()).hexdigest()
+(ARTIFACTS / "nuclei_lens_render_model.zip.sha256").write_text(
+    f"{bundle_digest}  {MODEL_BUNDLE.name}\n", encoding="utf-8"
+)
+print("Render model bundle:", MODEL_BUNDLE)
+print("NUCLEI_MODEL_BUNDLE_SHA256:", bundle_digest)
 

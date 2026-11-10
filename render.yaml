@@ -17,6 +17,8 @@ services:
         value: "20"
       - key: NUCLEI_MAX_IMAGE_PIXELS
         value: "40000000"
+      - key: NUCLEI_MODEL_BUNDLE_MAX_MB
+        value: "1024"
     disk:
       name: nuclei-lens-model
       mountPath: /app/model
