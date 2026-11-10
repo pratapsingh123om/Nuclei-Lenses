@@ -1,0 +1,31 @@
+{
+  "protocol": "canonical_30_grouped_24_6",
+  "test_images": 14,
+  "unet_mean_dice": 0.8113116452249823,
+  "unet_dice_95ci": [
+    0.794997144649406,
+    0.8276688117179658
+  ],
+  "unet_mean_iou": 0.683672082977373,
+  "baseline_mean_dice": 0.760340175090351,
+  "mean_dice_gain": 0.05097147013463144,
+  "dice_gain_95ci": [
+    0.03877719218677489,
+    0.06379275030799765
+  ],
+  "unet_wins": 14,
+  "paired_wilcoxon_p": 0.0001220703125,
+  "mean_aji": 0.6332514143267266,
+  "aji_95ci": [
+    0.6097251194211661,
+    0.6574292575466899
+  ],
+  "ground_truth_mean_count": 478.35714285714283,
+  "count_mae": 114.35714285714286,
+  "count_median_absolute_error": 102.5,
+  "count_relative_mae_percent": 25.260424116779234,
+  "count_bias": 114.35714285714286,
+  "checkpoint_smoke_dice": 0.7942315363631601,
+  "checkpoint_reload_passed": true
+}
+

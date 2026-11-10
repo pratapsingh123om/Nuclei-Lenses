@@ -15,6 +15,20 @@ Nuclei Lens is a research application for segmenting and counting nuclei in H&E 
 - Input safeguards for MIME type, upload size, decoded image size, and model availability.
 - A root-level Vercel configuration for the React frontend and a Dockerfile for the TensorFlow API.
 
+## Held-out results
+
+Using the canonical 30-image MoNuSeg development cohort and all 14 held-out
+benchmark images, the U-Net achieved **0.8113 mean Dice** and **0.6837 mean
+IoU**, compared with 0.7603 Dice and 0.6147 IoU for the color/morphology
+baseline. It improved Dice on all 14 test images; the mean paired gain was
+0.0510 (95% bootstrap CI 0.0388–0.0638).
+
+Watershed instance separation achieved **0.6333 mean AJI**. Counting remains a
+documented limitation: 25.26% mean relative count MAE and a +114.36
+nuclei/image bias indicate systematic over-separation. See the complete
+[`results/` report](results/README.md) for confidence intervals, the checkpoint
+reload test, and failure analysis.
+
 ## Architecture
 
 ```text
@@ -152,6 +166,7 @@ Backend:
 | `NUCLEI_CORS_ORIGINS` | Comma-separated allowed frontend origins | `http://localhost:5173` |
 | `NUCLEI_MAX_UPLOAD_MB` | Maximum uploaded file size | `20` |
 | `NUCLEI_MAX_IMAGE_PIXELS` | Maximum decoded pixel count | `40000000` |
+| `NUCLEI_INFERENCE_BATCH_SIZE` | Patch batch size; use `1` on memory-limited CPU hosting | value frozen by training |
 
 ## API
 
@@ -192,6 +207,14 @@ docker run --rm -p 8000:8000 -e NUCLEI_CORS_ORIGINS=https://your-project.vercel.
 Deploy the same image to a container platform with enough RAM for TensorFlow. Set `NUCLEI_CORS_ORIGINS` to the final Vercel origin and set `VITE_API_URL` in Vercel to the final HTTPS API origin.
 
 The TensorFlow API is deliberately excluded from the static Vercel build because its runtime and model requirements are better suited to a container service.
+
+### Render Blueprint
+
+For the deployed demo, use the tracked [`render.yaml`](render.yaml). It creates
+a Docker web service with 2 GB RAM, a persistent model disk, a health check, and
+a memory-conscious inference batch size. Follow the complete
+[`Render deployment guide`](docs/RENDER_DEPLOYMENT.md) to upload the checkpoint,
+verify readiness, configure CORS, and connect the Vercel frontend.
 
 ## Validate
 

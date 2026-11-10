@@ -91,7 +91,13 @@ class InferenceService:
         config = self.state.config
         patch_size = int(config.get("patch_size", 256))
         overlap = int(config.get("overlap", 64))
-        batch_size = int(config.get("inference_batch_size", 8))
+        batch_size = int(
+            os.getenv(
+                "NUCLEI_INFERENCE_BATCH_SIZE",
+                str(config.get("inference_batch_size", 8)),
+            )
+        )
+        batch_size = max(1, batch_size)
         height, width = rgb.shape[:2]
         padded_height = max(height, patch_size)
         padded_width = max(width, patch_size)
