@@ -79,5 +79,5 @@ trailing slash.
 3. Confirm the response includes all four visualizations and a predicted count.
 4. Check Render logs for HTTP 200 and confirm no worker restart or memory kill.
 
-This service is intended for portfolio/research traffic, not clinical workloads.
+This service is intended for research traffic, not clinical workloads.
 

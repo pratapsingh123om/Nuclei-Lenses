@@ -270,7 +270,7 @@ The test suite checks sliding-window edge coverage, safe behavior when model art
 
 The model is designed for the original MoNuSeg 2018 benchmark. Keep the original per-nucleus annotations so semantic segmentation and instance counting can be evaluated separately.
 
-Recommended held-out reporting:
+Evaluation outputs include:
 
 - mean per-image Dice and IoU for binary masks;
 - Aggregated Jaccard Index (AJI) for instances;
@@ -278,9 +278,3 @@ Recommended held-out reporting:
 - per-image results and representative strong, typical, and failure overlays.
 
 Segmentation determines which pixels belong to nuclei. Instance segmentation assigns those pixels to individual nuclei. Touching nuclei may produce a good semantic mask while still being undercounted, which is why the app keeps the two stages explicit.
-
-## Project description
-
-**Short description for GitHub or Vercel:**
-
-> U-Net research app for H&E nuclei segmentation, watershed instance separation, visual overlays, and nuclei counting.

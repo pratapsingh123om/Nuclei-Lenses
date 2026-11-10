@@ -285,7 +285,7 @@ export default function App() {
 
         <section className="disclaimer">
           <div className="disclaimer-icon">R</div>
-          <div><strong>Research use only</strong><p>Nuclei Lens is an educational portfolio project and is not validated for diagnosis, treatment, or clinical decision-making.</p></div>
+          <div><strong>Research use only</strong><p>Nuclei Lens is a research application and is not validated for diagnosis, treatment, or clinical decision-making.</p></div>
         </section>
       </main>
 
