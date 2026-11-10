@@ -47,7 +47,9 @@ React + Vite frontend ───────────────► FastAPI i
                                   mask · overlay · instances · count
 ```
 
-The frontend and backend are deployed separately. Vercel serves the static React application. The FastAPI service runs in a container with sufficient memory for TensorFlow and the trained model.
+The frontend and backend are deployed separately. Vercel serves the static
+React application. Google Cloud Run hosts FastAPI, and its dedicated service
+identity reads the private model bundle from Google Cloud Storage.
 
 ## Project structure
 
@@ -208,7 +210,18 @@ Deploy the same image to a container platform with enough RAM for TensorFlow. Se
 
 The TensorFlow API is deliberately excluded from the static Vercel build because its runtime and model requirements are better suited to a container service.
 
-### Render Blueprint
+### Google Cloud Run — recommended
+
+The recommended backend uses Cloud Run with a dedicated service account and a
+private Google Cloud Storage model object. No public model URL or persistent
+filesystem is required. Run the tracked
+[`Cloud Shell deployment script`](scripts/deploy_cloud_run.sh) or follow the
+complete [`Cloud Run deployment guide`](docs/CLOUD_RUN_DEPLOYMENT.md). The
+script builds the backend Dockerfile, grants bucket-level read-only access,
+checksum-verifies the model, limits concurrency and scaling, and prints the URL
+to place in Vercel as `VITE_API_URL`.
+
+### Render Blueprint — legacy alternative
 
 For the deployed demo, use the tracked [`render.yaml`](render.yaml). It creates
 a Docker web service with 2 GB RAM, a health check, and a memory-conscious

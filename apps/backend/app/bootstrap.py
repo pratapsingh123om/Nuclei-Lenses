@@ -85,12 +85,37 @@ def download_bundle(url: str, destination: Path, max_bytes: int) -> None:
             output.write(chunk)
 
 
+def parse_gcs_uri(uri: str) -> tuple[str, str]:
+    if not uri.startswith("gs://"):
+        raise RuntimeError("NUCLEI_MODEL_BUNDLE_GCS_URI must start with gs://")
+    bucket, separator, object_name = uri[5:].partition("/")
+    if not separator or not bucket or not object_name:
+        raise RuntimeError("GCS model URI must include both bucket and object name")
+    return bucket, object_name
+
+
+def download_gcs_bundle(uri: str, destination: Path, max_bytes: int) -> None:
+    # Imported lazily so local setup_required mode does not require credentials.
+    from google.cloud import storage
+
+    bucket_name, object_name = parse_gcs_uri(uri)
+    client = storage.Client()
+    blob = client.bucket(bucket_name).blob(object_name)
+    blob.reload()
+    if blob.size is None or blob.size <= 0:
+        raise RuntimeError(f"GCS model object is empty: {uri}")
+    if blob.size > max_bytes:
+        raise RuntimeError("GCS model bundle exceeds NUCLEI_MODEL_BUNDLE_MAX_MB")
+    blob.download_to_filename(str(destination), checksum="auto")
+
+
 def bootstrap_model(model_dir: Path) -> str:
     if all((model_dir / filename).is_file() for filename in REQUIRED_FILES):
         return "existing model artifacts found"
 
+    gcs_uri = os.getenv("NUCLEI_MODEL_BUNDLE_GCS_URI", "").strip()
     bundle_url = os.getenv("NUCLEI_MODEL_BUNDLE_URL", "").strip()
-    if not bundle_url:
+    if not gcs_uri and not bundle_url:
         return "model artifacts absent; starting in setup_required mode"
 
     maximum_mb = max(1, int(os.getenv("NUCLEI_MODEL_BUNDLE_MAX_MB", "1024")))
@@ -98,7 +123,10 @@ def bootstrap_model(model_dir: Path) -> str:
     with tempfile.NamedTemporaryFile(dir=model_dir, suffix=".zip", delete=False) as handle:
         temporary_bundle = Path(handle.name)
     try:
-        download_bundle(bundle_url, temporary_bundle, max_bytes=maximum_mb * 1024 * 1024)
+        if gcs_uri:
+            download_gcs_bundle(gcs_uri, temporary_bundle, max_bytes=maximum_mb * 1024 * 1024)
+        else:
+            download_bundle(bundle_url, temporary_bundle, max_bytes=maximum_mb * 1024 * 1024)
         install_bundle(
             temporary_bundle,
             model_dir,
@@ -106,5 +134,6 @@ def bootstrap_model(model_dir: Path) -> str:
         )
     finally:
         temporary_bundle.unlink(missing_ok=True)
-    return "model bundle downloaded and installed"
+    source = gcs_uri if gcs_uri else bundle_url
+    return f"model bundle downloaded and installed from {source}"
 

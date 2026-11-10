@@ -6,4 +6,5 @@ numpy>=2.0,<3
 scipy>=1.14,<2
 scikit-image>=0.25,<1
 tensorflow-cpu>=2.21,<2.22
+google-cloud-storage>=3,<4
 
