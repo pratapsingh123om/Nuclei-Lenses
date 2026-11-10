@@ -8,7 +8,11 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: NUCLEI_MODEL_DIR
-        value: /app/model
+        value: /tmp/nuclei-model
+      - key: NUCLEI_MODEL_BUNDLE_URL
+        sync: false
+      - key: NUCLEI_MODEL_BUNDLE_SHA256
+        sync: false
       - key: NUCLEI_CORS_ORIGINS
         sync: false
       - key: NUCLEI_INFERENCE_BATCH_SIZE
@@ -19,8 +23,4 @@ services:
         value: "40000000"
       - key: NUCLEI_MODEL_BUNDLE_MAX_MB
         value: "1024"
-    disk:
-      name: nuclei-lens-model
-      mountPath: /app/model
-      sizeGB: 1
 

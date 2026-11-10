@@ -211,9 +211,9 @@ The TensorFlow API is deliberately excluded from the static Vercel build because
 ### Render Blueprint
 
 For the deployed demo, use the tracked [`render.yaml`](render.yaml). It creates
-a Docker web service with 2 GB RAM, a persistent model disk, a health check, and
-a memory-conscious inference batch size. The backend can accept a manual model
-upload or securely bootstrap a checksum-verified HTTPS model bundle. Follow the complete
+a Docker web service with 2 GB RAM, a health check, and a memory-conscious
+inference batch size. No Render disk is required: the backend securely downloads
+a checksum-verified model bundle from your cloud bucket on startup. Follow the complete
 [`Render deployment guide`](docs/RENDER_DEPLOYMENT.md) to upload the checkpoint,
 verify readiness, configure CORS, and connect the Vercel frontend.
 
