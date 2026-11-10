@@ -151,11 +151,46 @@ function ResultPanel({ result, fileName, activeView, setActiveView, busy }) {
       </div>
 
       <div className="metrics-grid">
-        <article><span>Predicted nuclei</span><strong>{result.predicted_count.toLocaleString()}</strong><small>watershed instances</small></article>
-        <article><span>Nuclear area</span><strong>{result.nuclei_area_percent}%</strong><small>of image pixels</small></article>
-        <article><span>Mask threshold</span><strong>{result.threshold.toFixed(2)}</strong><small>frozen on validation</small></article>
+        <article><span>Estimated nuclei</span><strong>{result.predicted_count.toLocaleString()}</strong><small>separated nucleus-like objects</small></article>
+        <article><span>Nuclear area fraction</span><strong>{result.nuclei_area_percent}%</strong><small>of this field classified as nuclear</small></article>
+        <article><span>Field size</span><strong>{result.width} × {result.height}</strong><small>pixels · compare at matched scale</small></article>
         <article><span>Processing time</span><strong>{result.inference_ms.toLocaleString()} ms</strong><small>server inference</small></article>
       </div>
+
+      <section className="practical-card" aria-labelledby="practical-title">
+        <div className="practical-summary">
+          <span className="eyebrow">Practical meaning</span>
+          <h3 id="practical-title">Turn this tissue field into a repeatable measurement.</h3>
+          <p>
+            In this {result.width.toLocaleString()} × {result.height.toLocaleString()} pixel field, the model estimates{" "}
+            <strong>{result.predicted_count.toLocaleString()} nucleus-like objects</strong>. Predicted nuclei occupy{" "}
+            <strong>{result.nuclei_area_percent}% of the field</strong>.
+          </p>
+        </div>
+
+        <div className="practical-use-grid">
+          <article>
+            <span>01</span>
+            <div><strong>Compare matched fields</strong><p>Track count and nuclear-area changes across images acquired at the same size and magnification.</p></div>
+          </article>
+          <article>
+            <span>02</span>
+            <div><strong>Prioritize review</strong><p>Use the overlay to locate nucleus-rich regions and decide where closer visual inspection is most useful.</p></div>
+          </article>
+          <article>
+            <span>03</span>
+            <div><strong>Check the evidence</strong><p>Switch between original, mask, and instances to verify which pixels and objects produced the measurements.</p></div>
+          </article>
+        </div>
+
+        <div className="practical-caution">
+          <strong>Interpret as an estimate.</strong>
+          <p>
+            The benchmark mean relative count error is 20.3%, with a tendency to overcount. The model does not identify cell type,
+            cancer status, or grade. Counts from different image scales are not directly comparable.
+          </p>
+        </div>
+      </section>
     </section>
   );
 }
@@ -171,7 +206,7 @@ function MethodStrip() {
         <li><span>1</span><div><strong>Tile</strong><p>Split the field into overlapping 256px patches.</p></div></li>
         <li><span>2</span><div><strong>Segment</strong><p>Average U-Net probabilities across overlaps.</p></div></li>
         <li><span>3</span><div><strong>Separate</strong><p>Use distance peaks and watershed for touching nuclei.</p></div></li>
-        <li><span>4</span><div><strong>Quantify</strong><p>Return the mask, instances, area, and count.</p></div></li>
+        <li><span>4</span><div><strong>Compare</strong><p>Use count and area fraction across tissue fields acquired at matched scale.</p></div></li>
       </ol>
     </section>
   );
