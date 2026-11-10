@@ -117,6 +117,24 @@ checkpoint on reconstructed validation images, freezes semantic and watershed
 settings, and evaluates all 14 test images. It writes the checkpoint and
 `frozen_config.json` expected by the API.
 
+### Tune instance separation without retraining
+
+After the notebook has produced its checkpoint and split manifest, run
+[`scripts/tune_instance_v2.py`](scripts/tune_instance_v2.py) to reduce
+watershed over-separation. It keeps the semantic threshold fixed, estimates
+nucleus size from the 24 training images, searches component-aware watershed
+settings using only the six validation images, freezes the winning settings,
+and then evaluates the 14 benchmark images. Existing v1 results are preserved
+under `artifacts/`; v2 outputs are written to `artifacts/instance_v2/`.
+
+```bash
+python scripts/tune_instance_v2.py --search-profile balanced
+```
+
+Use `--validation-only` to freeze the configuration without evaluating the
+benchmark images. Full-image U-Net probability maps are cached, so subsequent
+searches do not repeat inference.
+
 ## Run locally
 
 ### Prerequisites
