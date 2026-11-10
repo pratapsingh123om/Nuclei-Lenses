@@ -65,6 +65,10 @@ checksum and required configuration keys, and atomically installs both files on
 the persistent disk before FastAPI starts. If the files are already on disk,
 the download is skipped.
 
+If training is already complete and you do not want to reopen the notebook, run
+the standalone `scripts/package_model_bundle.py` script. With its default Drive
+layout it needs no arguments and performs no training.
+
 ## 3. Connect Vercel
 
 Set this variable in the Vercel frontend project:
