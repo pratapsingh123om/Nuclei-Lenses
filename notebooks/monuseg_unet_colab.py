@@ -76,7 +76,7 @@ class Config:
     learning_rate: float = 3e-4
     foreground_patch_probability: float = 0.75
     run_overfit_check: bool = True
-    overfit_epochs: int = 40
+    overfit_max_steps: int = 300
     seed: int = 42
 
 
@@ -513,17 +513,34 @@ model.summary()
 
 # %%
 if CFG.run_overfit_check:
+    # Use the same four non-augmented, nucleus-containing patches for every
+    # update. Forty updates are not enough for this model; the purpose here is
+    # to verify that the pipeline can memorize, not to estimate generalization.
+    overfit_rng = np.random.default_rng(CFG.seed + 99)
+    fixed_samples = []
+    attempts = 0
+    while len(fixed_samples) < 4 and attempts < 100:
+        candidate = sample_patch(train_images, train_masks, augment=False, rng=overfit_rng)
+        attempts += 1
+        if float(candidate[1].mean()) >= 0.01:
+            fixed_samples.append(candidate)
+    assert len(fixed_samples) == 4, "Could not sample four foreground patches; inspect prepared masks."
+    overfit_images = tf.convert_to_tensor(np.stack([item[0] for item in fixed_samples]), tf.float32)
+    overfit_masks = tf.convert_to_tensor(np.stack([item[1] for item in fixed_samples]), tf.float32)
     overfit_model = compiled_model()
-    overfit_images, overfit_masks = next(iter(training_dataset.unbatch().batch(4)))
-    tiny_dataset = tf.data.Dataset.from_tensors((overfit_images, overfit_masks)).repeat()
-    overfit_history = overfit_model.fit(
-        tiny_dataset,
-        steps_per_epoch=1,
-        epochs=CFG.overfit_epochs,
-        verbose=0,
-    )
-    final_tiny_dice = float(overfit_history.history["soft_dice"][-1])
-    print("Four-patch overfit Dice:", round(final_tiny_dice, 4))
+    overfit_model.optimizer.learning_rate.assign(1e-3)
+    final_tiny_dice = 0.0
+    completed_steps = 0
+    for step in range(1, CFG.overfit_max_steps + 1):
+        overfit_model.train_on_batch(overfit_images, overfit_masks)
+        if step == 1 or step % 25 == 0:
+            tiny_prediction = overfit_model(overfit_images, training=False)
+            final_tiny_dice = float(soft_dice(overfit_masks, tiny_prediction).numpy())
+            print(f"Overfit step {step:3d}: soft Dice {final_tiny_dice:.4f}")
+            completed_steps = step
+            if final_tiny_dice >= 0.90:
+                break
+    print(f"Four-patch overfit Dice: {final_tiny_dice:.4f} after {completed_steps} updates")
     assert final_tiny_dice >= 0.85, "Overfit check failed; inspect masks, loss, and model before full training."
     del overfit_model
 
