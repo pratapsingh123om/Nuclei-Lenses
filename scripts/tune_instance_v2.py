@@ -617,17 +617,14 @@ def main(argv: list[str] | None = None) -> None:
     print(f"Training-derived median nucleus area: {median_area:.1f} pixels")
     print(f"Frozen semantic threshold: {float(frozen['mask_threshold']):.3f}")
 
-    needed_rows = validation_rows if args.validation_only else pd.concat([validation_rows, test_rows])
-    probabilities = probability_cache(
-        needed_rows,
+    # Do not even reconstruct benchmark predictions until v2 is frozen.
+    validation_probabilities = probability_cache(
+        validation_rows,
         checkpoint,
         output_root,
         frozen,
         force=args.force_predictions,
     )
-    validation_probabilities = {
-        str(row.image_id): probabilities[str(row.image_id)] for _, row in validation_rows.iterrows()
-    }
     validation_truth = {
         str(row.image_id): load_instances(row.instance_map_path) for _, row in validation_rows.iterrows()
     }
@@ -714,9 +711,13 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     print("\nConfiguration frozen. Evaluating the 14 benchmark images once...")
-    test_probabilities = {
-        str(row.image_id): probabilities[str(row.image_id)] for _, row in test_rows.iterrows()
-    }
+    test_probabilities = probability_cache(
+        test_rows,
+        checkpoint,
+        output_root,
+        frozen,
+        force=args.force_predictions,
+    )
     test_truth = {str(row.image_id): load_instances(row.instance_map_path) for _, row in test_rows.iterrows()}
     test_metrics, test_results = evaluate_parameters(
         test_rows,
