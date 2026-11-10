@@ -49,6 +49,10 @@ apps/
     tests/               inference-helper tests
     Dockerfile           container deployment
 packages/                shared monorepo packages
+notebooks/               generated Colab notebook and readable source
+scripts/                 notebook build and structural validation
+inspection.py            reusable archive inspection command
+phase1_colab_cell.py     no-upload Phase One Colab cell
 vercel.json              root Vercel build contract
 turbo.json               monorepo task configuration
 ```
@@ -79,6 +83,23 @@ The configuration can include:
 ```
 
 Use the values frozen on validation data. Do not tune the threshold or watershed settings on the benchmark test set.
+
+## Train and evaluate in Colab
+
+1. Put the original MoNuSeg training and annotated test ZIP files in
+   `/content/drive/MyDrive/Nuclei-lens/`.
+2. Copy and run [`phase1_colab_cell.py`](phase1_colab_cell.py) in one Colab
+   cell. It audits the archives without extracting or training and records the
+   canonical 30-image protocol.
+3. Continue only when the report says integrity `PASS` and benchmark `READY`.
+4. Open [`notebooks/monuseg_unet_colab.ipynb`](notebooks/monuseg_unet_colab.ipynb)
+   in a GPU Colab runtime and run it from top to bottom.
+
+The notebook creates a grouped 24/6 split before patch sampling, runs the color
+baseline, verifies a four-patch overfit check, trains the U-Net, selects its
+checkpoint on reconstructed validation images, freezes semantic and watershed
+settings, and evaluates all 14 test images. It writes the checkpoint and
+`frozen_config.json` expected by the API.
 
 ## Run locally
 
