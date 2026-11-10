@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 
-from app.imaging import clean_binary_mask, decode_rgb, split_instances
+from app.imaging import clean_binary_mask, decode_rgb, split_instances, split_instances_component_aware
 from app.model import InferenceService, _starts
 
 
@@ -35,4 +35,34 @@ def test_watershed_returns_integer_instances():
     instances = split_instances(mask, min_distance=8, min_size=8)
     assert np.issubdtype(instances.dtype, np.integer)
     assert instances.max() >= 2
+
+
+V2_CONFIG = {
+    "median_nucleus_area": 350.0,
+    "min_component_size": 20,
+    "closing_radius": 0,
+    "distance_sigma": 0.75,
+    "h_value": 1.0,
+    "min_distance": 8,
+    "split_area_factor": 1.4,
+    "count_cap_factor": 1.2,
+}
+
+
+def test_component_aware_pipeline_keeps_isolated_nucleus_single():
+    yy, xx = np.ogrid[:96, :96]
+    probability = np.zeros((96, 96), dtype=np.float32)
+    probability[(yy - 48) ** 2 + (xx - 48) ** 2 < 11**2] = 0.95
+    instances = split_instances_component_aware(probability, 0.5, V2_CONFIG)
+    assert int(instances.max()) == 1
+
+
+def test_component_aware_pipeline_splits_touching_nuclei():
+    yy, xx = np.ogrid[:96, :96]
+    probability = np.zeros((96, 96), dtype=np.float32)
+    left = (yy - 48) ** 2 + (xx - 39) ** 2 < 12**2
+    right = (yy - 48) ** 2 + (xx - 57) ** 2 < 12**2
+    probability[left | right] = 0.95
+    instances = split_instances_component_aware(probability, 0.5, V2_CONFIG)
+    assert int(instances.max()) == 2
 

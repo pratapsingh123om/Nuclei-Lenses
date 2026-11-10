@@ -26,6 +26,19 @@
   "count_relative_mae_percent": 25.260424116779234,
   "count_bias": 114.35714285714286,
   "checkpoint_smoke_dice": 0.7942315363631601,
-  "checkpoint_reload_passed": true
+  "checkpoint_reload_passed": true,
+  "instance_v2": {
+    "mean_aji": 0.6431069950897468,
+    "count_mae": 92.07142857142857,
+    "count_median_absolute_error": 78.5,
+    "count_relative_mae_percent": 20.266388716772337,
+    "count_bias": 92.07142857142857,
+    "mean_ground_truth_count": 478.35714285714283,
+    "mean_predicted_count": 570.4285714285714,
+    "mean_semantic_dice": 0.8113116452249823,
+    "mean_semantic_iou": 0.683672082977373,
+    "count_mae_reduction_percent": 19.48782011242964,
+    "aji_change": 0.009855580763020177
+  }
 }
 

@@ -7,7 +7,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from .imaging import clean_binary_mask, decode_rgb, render_outputs, split_instances
+from .imaging import (
+    clean_binary_mask,
+    decode_rgb,
+    render_outputs,
+    split_instances,
+    split_instances_component_aware,
+)
 from .model import InferenceService
 
 
@@ -56,6 +62,7 @@ def health() -> dict:
         "model": {
             "threshold": service.state.config.get("mask_threshold"),
             "patch_size": service.state.config.get("patch_size", 256),
+            "instance_pipeline": service.state.config.get("instance_pipeline_version", "v1_watershed"),
         },
     }
 
@@ -79,7 +86,12 @@ async def segment(image: UploadFile = File(...)) -> dict:
         min_size = int(config.get("min_object_size", 12))
         min_distance = int(config.get("watershed_min_distance", 5))
         mask = clean_binary_mask(probability, threshold, min_size)
-        instances = split_instances(mask, min_distance, min_size)
+        instance_config = config.get("instance_pipeline", {})
+        instance_version = str(config.get("instance_pipeline_version", "v1_watershed"))
+        if instance_version == "v2_component_aware":
+            instances = split_instances_component_aware(probability, threshold, instance_config)
+        else:
+            instances = split_instances(mask, min_distance, min_size)
         visuals = render_outputs(rgb, mask, instances)
         elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
     except ValueError as exc:
@@ -94,6 +106,7 @@ async def segment(image: UploadFile = File(...)) -> dict:
         "predicted_count": int(instances.max()),
         "nuclei_area_percent": round(float(mask.mean() * 100), 2),
         "threshold": threshold,
+        "instance_pipeline": instance_version,
         "inference_ms": elapsed_ms,
         "visuals": visuals,
         "notice": "Research demonstration only. Not for clinical diagnosis.",

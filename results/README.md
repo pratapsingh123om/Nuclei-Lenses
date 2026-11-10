@@ -19,21 +19,19 @@ evaluating the 14 benchmark test images.
 
 ## Instance segmentation and counting
 
-| Measure | Result |
-|---|---:|
-| Mean AJI | 0.6333 |
-| AJI 95% bootstrap CI | 0.6097–0.6574 |
-| Count MAE | 114.36 nuclei/image |
-| Median absolute count error | 102.5 nuclei/image |
-| Mean per-image relative count MAE | 25.26% |
-| Signed count bias | +114.36 nuclei/image |
+| Measure | Watershed v1 | Component-aware v2 |
+|---|---:|---:|
+| Mean AJI | 0.6333 | **0.6431** |
+| Count MAE | 114.36 | **92.07 nuclei/image** |
+| Median absolute count error | 102.5 | **78.5 nuclei/image** |
+| Mean per-image relative count MAE | 25.26% | **20.27%** |
+| Signed count bias | +114.36 | **+92.07 nuclei/image** |
 
-The positive bias equals the MAE, indicating systematic over-counting in this
-test run. The likely failure mode is watershed over-separation: one biological
-nucleus is sometimes divided into multiple predicted instances. This is an
-explicit limitation, not a tuned-away test result. Future work should tune or
-learn object centers on validation data and inspect stain- and organ-specific
-count errors.
+V2 settings were selected on the six validation images without using benchmark
+images, then evaluated once on all 14 test images. It reduced count MAE by
+19.5% while preserving 0.8113 Dice and 0.6837 IoU. A v2 AJI confidence interval
+has not been calculated and is therefore not claimed. The positive bias still
+equals the MAE, indicating systematic over-counting remains a limitation.
 
 ## Reproducibility check
 

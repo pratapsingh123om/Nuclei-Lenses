@@ -23,9 +23,11 @@ IoU**, compared with 0.7603 Dice and 0.6147 IoU for the color/morphology
 baseline. It improved Dice on all 14 test images; the mean paired gain was
 0.0510 (95% bootstrap CI 0.0388–0.0638).
 
-Watershed instance separation achieved **0.6333 mean AJI**. Counting remains a
-documented limitation: 25.26% mean relative count MAE and a +114.36
-nuclei/image bias indicate systematic over-separation. See the complete
+Component-aware watershed instance separation achieved **0.6431 mean AJI** and
+reduced count MAE from 114.36 to **92.07 nuclei/image** (a 19.5% reduction)
+without changing semantic accuracy. Counting remains a documented limitation:
+20.27% mean relative count MAE and a +92.07 nuclei/image bias still indicate
+systematic over-separation. See the complete
 [`results/` report](results/README.md) for confidence intervals, the checkpoint
 reload test, and failure analysis.
 

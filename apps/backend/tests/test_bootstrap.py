@@ -41,6 +41,20 @@ def test_sha_mismatch_is_rejected(tmp_path):
         install_bundle(bundle, tmp_path / "model", "0" * 64)
 
 
+def test_incomplete_v2_configuration_is_rejected(tmp_path):
+    bundle = tmp_path / "model.zip"
+    config = {
+        **CONFIG,
+        "instance_pipeline_version": "v2_component_aware",
+        "instance_pipeline": {"version": "v2_component_aware"},
+    }
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("best_unet.weights.h5", b"test-weights")
+        archive.writestr("frozen_config.json", json.dumps(config))
+    with pytest.raises(RuntimeError, match="v2 instance configuration"):
+        install_bundle(bundle, tmp_path / "model")
+
+
 def test_bootstrap_without_url_starts_setup_mode(tmp_path, monkeypatch):
     monkeypatch.delenv("NUCLEI_MODEL_BUNDLE_URL", raising=False)
     monkeypatch.delenv("NUCLEI_MODEL_BUNDLE_GCS_URI", raising=False)

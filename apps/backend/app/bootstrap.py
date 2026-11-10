@@ -19,6 +19,17 @@ REQUIRED_CONFIG_KEYS = {
     "min_object_size",
     "watershed_min_distance",
 }
+REQUIRED_V2_INSTANCE_KEYS = {
+    "version",
+    "median_nucleus_area",
+    "min_component_size",
+    "closing_radius",
+    "distance_sigma",
+    "h_value",
+    "min_distance",
+    "split_area_factor",
+    "count_cap_factor",
+}
 
 
 def file_sha256(path: Path) -> str:
@@ -46,6 +57,13 @@ def install_bundle(bundle_path: Path, model_dir: Path, expected_sha256: str = ""
         missing_keys = sorted(REQUIRED_CONFIG_KEYS - set(config))
         if missing_keys:
             raise RuntimeError(f"frozen_config.json is missing keys: {', '.join(missing_keys)}")
+        if config.get("instance_pipeline_version") == "v2_component_aware":
+            instance_config = config.get("instance_pipeline", {})
+            missing_v2_keys = sorted(REQUIRED_V2_INSTANCE_KEYS - set(instance_config))
+            if missing_v2_keys:
+                raise RuntimeError(
+                    "v2 instance configuration is missing keys: " + ", ".join(missing_v2_keys)
+                )
 
         temporary_paths = []
         try:

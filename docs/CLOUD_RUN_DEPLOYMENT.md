@@ -11,9 +11,9 @@ GitHub repository ──source build──► Google Cloud Run FastAPI
 Vercel React frontend ──HTTPS──► public Cloud Run API
 ```
 
-The model object remains private. Cloud Run downloads
-`gs://nuclei-lenses/nuclei_lens_render_model.zip` using a dedicated service
-account with only `roles/storage.objectViewer` on that bucket.
+The model object remains private. Cloud Run downloads the explicitly selected
+bundle using a dedicated service account with only `roles/storage.objectViewer`
+on that bucket.
 
 ## Prerequisites
 
@@ -23,12 +23,6 @@ account with only `roles/storage.objectViewer` on that bucket.
   `https://nuclei-lenses.vercel.app`.
 - Permission to create service accounts, grant bucket IAM, enable APIs, and
   deploy Cloud Run from source.
-
-The expected model SHA-256 is:
-
-```text
-6273a494092fced07eb355010f231f6eab7d07b8116630c7841699914231c27a
-```
 
 ## Deploy from Google Cloud Shell
 
@@ -40,20 +34,26 @@ cd Nuclei-Lenses
 
 export GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"
 export VERCEL_ORIGIN="https://YOUR-PROJECT.vercel.app"
+export MODEL_OBJECT="nuclei_lens_cloudrun_model_v2.zip"
+export MODEL_SHA256="SHA256_PRINTED_BY_THE_V2_PACKAGER"
 
 bash scripts/deploy_cloud_run.sh
 ```
+
+Both model variables are required. This prevents an old object or checksum
+from being selected silently during a later deployment.
 
 The script:
 
 1. enables Cloud Run, Cloud Build, Artifact Registry, IAM, and Storage APIs;
 2. creates a dedicated `nuclei-lens-api` runtime service account when absent;
-3. grants that account read-only access to the model bucket;
-4. builds `apps/backend/Dockerfile` from source;
-5. deploys a public API with 2 vCPU, 2 GiB RAM, concurrency one, and a maximum
+3. grants the default build identity the Cloud Run Builder role;
+4. grants the runtime account read-only access to the model bucket;
+5. builds `apps/backend/Dockerfile` from source;
+6. deploys a public API with 2 vCPU, 2 GiB RAM, concurrency one, and a maximum
    of one instance;
-6. downloads and checksum-verifies the private model at container startup;
-7. prints the Cloud Run URL and calls `/api/health`.
+7. downloads and checksum-verifies the private model at container startup;
+8. prints the Cloud Run URL and calls `/api/health`.
 
 The bucket URL returning HTTP 403 in an ordinary browser is expected because
 the object remains private. Cloud Run authenticates through its service identity.
@@ -77,7 +77,8 @@ Open:
 https://YOUR-CLOUD-RUN-SERVICE.run.app/api/health
 ```
 
-The response must show `"ready": true`. Then upload a small H&E image through
+The response must show `"ready": true` and
+`"instance_pipeline": "v2_component_aware"`. Then upload a small H&E image through
 the Vercel interface and confirm that the overlay, mask, instance view, and
 predicted count all appear.
 

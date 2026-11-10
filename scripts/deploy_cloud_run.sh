@@ -8,9 +8,11 @@ REGION="${REGION:-asia-south1}"
 SERVICE="${SERVICE:-nuclei-lens-api}"
 SERVICE_ACCOUNT_NAME="${SERVICE_ACCOUNT_NAME:-nuclei-lens-api}"
 MODEL_BUCKET="${MODEL_BUCKET:-nuclei-lenses}"
-MODEL_OBJECT="${MODEL_OBJECT:-nuclei_lens_render_model.zip}"
-MODEL_SHA256="${MODEL_SHA256:-6273a494092fced07eb355010f231f6eab7d07b8116630c7841699914231c27a}"
+: "${MODEL_OBJECT:?Set MODEL_OBJECT to the validated model bundle object name}"
+: "${MODEL_SHA256:?Set MODEL_SHA256 to the validated model bundle SHA-256}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT_NAME}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
+PROJECT_NUMBER="$(gcloud projects describe "${GOOGLE_CLOUD_PROJECT}" --format='value(projectNumber)')"
+BUILD_SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 gcloud config set project "${GOOGLE_CLOUD_PROJECT}"
 gcloud services enable \
@@ -24,6 +26,11 @@ if ! gcloud iam service-accounts describe "${SERVICE_ACCOUNT}" >/dev/null 2>&1; 
   gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
     --display-name="Nuclei Lens Cloud Run runtime"
 fi
+
+gcloud projects add-iam-policy-binding "${GOOGLE_CLOUD_PROJECT}" \
+  --member="serviceAccount:${BUILD_SERVICE_ACCOUNT}" \
+  --role="roles/run.builder" \
+  --quiet >/dev/null
 
 gcloud storage buckets add-iam-policy-binding "gs://${MODEL_BUCKET}" \
   --member="serviceAccount:${SERVICE_ACCOUNT}" \
