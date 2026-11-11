@@ -10,6 +10,8 @@ SERVICE_ACCOUNT_NAME="${SERVICE_ACCOUNT_NAME:-nuclei-lens-api}"
 MODEL_BUCKET="${MODEL_BUCKET:-nuclei-lenses}"
 : "${MODEL_OBJECT:?Set MODEL_OBJECT to the validated model bundle object name}"
 : "${MODEL_SHA256:?Set MODEL_SHA256 to the validated model bundle SHA-256}"
+: "${PCAM_MODEL_OBJECT:?Set PCAM_MODEL_OBJECT to the evaluated PCam bundle object name}"
+: "${PCAM_MODEL_SHA256:?Set PCAM_MODEL_SHA256 to the evaluated PCam bundle SHA-256}"
 SERVICE_ACCOUNT="${SERVICE_ACCOUNT_NAME}@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com"
 PROJECT_NUMBER="$(gcloud projects describe "${GOOGLE_CLOUD_PROJECT}" --format='value(projectNumber)')"
 BUILD_SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
@@ -42,12 +44,12 @@ gcloud run deploy "${SERVICE}" \
   --service-account "${SERVICE_ACCOUNT}" \
   --allow-unauthenticated \
   --cpu 2 \
-  --memory 2Gi \
+  --memory 4Gi \
   --concurrency 1 \
   --timeout 300 \
   --min-instances 0 \
   --max-instances 1 \
-  --set-env-vars="NUCLEI_MODEL_DIR=/tmp/nuclei-model,NUCLEI_MODEL_BUNDLE_GCS_URI=gs://${MODEL_BUCKET}/${MODEL_OBJECT},NUCLEI_MODEL_BUNDLE_SHA256=${MODEL_SHA256},NUCLEI_MODEL_BUNDLE_MAX_MB=1024,NUCLEI_INFERENCE_BATCH_SIZE=1,NUCLEI_CORS_ORIGINS=${VERCEL_ORIGIN},NUCLEI_MAX_UPLOAD_MB=20,NUCLEI_MAX_IMAGE_PIXELS=40000000"
+  --set-env-vars="NUCLEI_MODEL_DIR=/tmp/nuclei-model,NUCLEI_MODEL_BUNDLE_GCS_URI=gs://${MODEL_BUCKET}/${MODEL_OBJECT},NUCLEI_MODEL_BUNDLE_SHA256=${MODEL_SHA256},NUCLEI_MODEL_BUNDLE_MAX_MB=1024,NUCLEI_INFERENCE_BATCH_SIZE=1,PCAM_MODEL_DIR=/tmp/pcam-model,PCAM_MODEL_BUNDLE_GCS_URI=gs://${MODEL_BUCKET}/${PCAM_MODEL_OBJECT},PCAM_MODEL_BUNDLE_SHA256=${PCAM_MODEL_SHA256},PCAM_MODEL_BUNDLE_MAX_MB=512,PCAM_INFERENCE_BATCH_SIZE=32,PCAM_INFERENCE_STRIDE=32,PCAM_MAX_PATCHES=2500,NUCLEI_CORS_ORIGINS=${VERCEL_ORIGIN},NUCLEI_CORS_ORIGIN_REGEX=https://.*\\.vercel\\.app,NUCLEI_MAX_UPLOAD_MB=20,NUCLEI_MAX_IMAGE_PIXELS=40000000"
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE}" --region "${REGION}" --format='value(status.url)')"
 echo "Cloud Run URL: ${SERVICE_URL}"

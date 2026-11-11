@@ -1,6 +1,6 @@
 # Nuclei Lens
 
-Nuclei Lens is a research application for segmenting and counting nuclei in H&E pathology images. A TensorFlow U-Net predicts nuclear pixels, overlapping patch inference reconstructs the full-resolution mask, and distance-transform watershed separates touching nuclei into countable instances.
+Nuclei Lens is a research application for quantifying H&E pathology images. Its nuclei workflow segments and counts individual nuclei; its PCam workflow classifies overlapping lymph-node patches and maps metastatic-tissue probabilities back to their source coordinates for visual review.
 
 > Research use only. Nuclei Lens is not validated for diagnosis, treatment, or clinical decision-making.
 
@@ -11,6 +11,10 @@ Nuclei Lens is a research application for segmenting and counting nuclei in H&E 
 - Full-image inference using overlapping 256 × 256 patches with probability averaging.
 - Instance separation and nuclei counting using distance-transform watershed.
 - Four synchronized views: original image, binary mask, color overlay, and instance map.
+- Calibrated PCam metastatic-pattern mapping with probability, threshold, and overlay views.
+- A plain-language preliminary finding—detected, limited evidence, or not detected in this field—with evidence strength, uncertainty, and the recommended review step.
+- Balanced and sensitivity-focused operating points frozen on validation data.
+- A diagnostic-context panel explaining how patch localization can support breast-cancer sentinel-lymph-node review—and what the model cannot diagnose.
 - Readiness checks that disable inference until a real trained checkpoint is available.
 - Input safeguards for MIME type, upload size, decoded image size, and model availability.
 - A root-level Vercel configuration for the React frontend and a Dockerfile for the TensorFlow API.
@@ -31,6 +35,13 @@ systematic over-separation. See the complete
 [`results/` report](results/README.md) for confidence intervals, the checkpoint
 reload test, and failure analysis.
 
+The EfficientNetV2-B0 PCam classifier achieved **0.9350 ROC-AUC** (95% bootstrap
+CI 0.9326–0.9373) and **0.9376 PR-AUC** on the official 32,768-patch held-out
+test split. At its validation-frozen sensitivity-focused operating point it
+reached **92.73% sensitivity**, 74.31% specificity, and 0.8490 F1. These are
+patch-level metastatic-tissue results, not slide-level or patient-level diagnostic
+performance.
+
 ## Architecture
 
 ```text
@@ -40,13 +51,11 @@ Browser
   ▼
 React + Vite frontend ───────────────► FastAPI inference service
                                          │
-                                         ├─ overlapping U-Net prediction
-                                         ├─ frozen validation threshold
-                                         ├─ morphology cleanup
-                                         └─ watershed instance separation
-                                                      │
-                                                      ▼
-                                  mask · overlay · instances · count
+                                         ├─ nuclei: U-Net + watershed
+                                         │             └─ mask · instances · count
+                                         │
+                                         └─ PCam: EfficientNetV2 + calibration
+                                                       └─ patch scores · heatmap · evidence map
 ```
 
 The frontend and backend are deployed separately. Vercel serves the static
@@ -77,7 +86,7 @@ turbo.json               monorepo task configuration
 
 ## Model artifacts
 
-The API intentionally starts in `setup_required` mode until these files are placed in `apps/backend/model/`:
+The nuclei API starts in `setup_required` mode until these files are placed in `apps/backend/model/`:
 
 ```text
 best_unet.weights.h5
@@ -85,6 +94,18 @@ frozen_config.json
 ```
 
 Model binaries are ignored by Git. This prevents a deployment from appearing to return trained predictions when no validated checkpoint is present.
+
+The optional metastatic-pattern workflow reads a separately verified bundle into
+`apps/backend/pcam_model/` containing:
+
+```text
+nuclei_lens_pcam_v1.keras
+frozen_pcam_v1.json
+manifest.json
+```
+
+The deployed PCam checkpoint is content-addressed by SHA-256
+`1e242a26645dfa982d88b369dc277f5f0d0fa8ca0e9ed1a0589aa729da1ac740`.
 
 The configuration can include:
 
@@ -189,6 +210,10 @@ Backend:
 | `NUCLEI_MAX_UPLOAD_MB` | Maximum uploaded file size | `20` |
 | `NUCLEI_MAX_IMAGE_PIXELS` | Maximum decoded pixel count | `40000000` |
 | `NUCLEI_INFERENCE_BATCH_SIZE` | Patch batch size; use `1` on memory-limited CPU hosting | value frozen by training |
+| `PCAM_MODEL_DIR` | Directory containing the evaluated PCam model and configuration | `apps/backend/pcam_model` |
+| `PCAM_INFERENCE_BATCH_SIZE` | Number of 96px patches classified per CPU batch | `32` |
+| `PCAM_INFERENCE_STRIDE` | Pixel stride used to construct the probability map | `32` |
+| `PCAM_MAX_PATCHES` | Maximum patches accepted per request | `2500` |
 
 ## API
 
@@ -196,6 +221,7 @@ Backend:
 |---|---|---|
 | `GET` | `/api/health` | Reports API, model, patch-size, and threshold readiness. |
 | `POST` | `/api/segment` | Accepts an image and returns visualizations, instance count, nuclear area, threshold, and processing time. |
+| `POST` | `/api/metastasis/analyze` | Returns calibrated PCam patch evidence, probability heatmaps, frozen-threshold maps, and processing metadata. |
 
 The API processes uploads in memory and does not persist tissue images.
 
@@ -268,7 +294,7 @@ The test suite checks sliding-window edge coverage, safe behavior when model art
 
 ## Dataset and evaluation
 
-The model is designed for the original MoNuSeg 2018 benchmark. Keep the original per-nucleus annotations so semantic segmentation and instance counting can be evaluated separately.
+The nuclei model is designed for the original MoNuSeg 2018 benchmark. Keep the original per-nucleus annotations so semantic segmentation and instance counting can be evaluated separately. The metastatic-pattern classifier uses the official PatchCamelyon splits: 262,144 training, 32,768 validation, and 32,768 test patches drawn from lymph-node histopathology.
 
 Evaluation outputs include:
 
@@ -278,3 +304,9 @@ Evaluation outputs include:
 - per-image results and representative strong, typical, and failure overlays.
 
 Segmentation determines which pixels belong to nuclei. Instance segmentation assigns those pixels to individual nuclei. Touching nuclei may produce a good semantic mask while still being undercounted, which is why the app keeps the two stages explicit.
+
+PCam answers a different question: whether the central region of a 96 × 96
+lymph-node patch contains metastatic tissue. Mapping overlapping patch scores can
+help prioritize suspicious regions for pathologist review, but it does not confirm
+or exclude breast cancer, assign lymph-node status, determine tumour stage or grade,
+or recommend treatment.

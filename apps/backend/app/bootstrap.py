@@ -30,6 +30,11 @@ REQUIRED_V2_INSTANCE_KEYS = {
     "split_area_factor",
     "count_cap_factor",
 }
+PCAM_REQUIRED_FILES = (
+    "nuclei_lens_pcam_v1.keras",
+    "frozen_pcam_v1.json",
+    "manifest.json",
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -82,6 +87,52 @@ def install_bundle(bundle_path: Path, model_dir: Path, expected_sha256: str = ""
                     # Some managed Windows filesystems deny rename even within
                     # one directory. Render/Linux uses the atomic path above;
                     # this fallback preserves compatibility for local tests.
+                    shutil.copyfile(temporary, target)
+                    temporary.unlink()
+        finally:
+            for temporary, _ in temporary_paths:
+                temporary.unlink(missing_ok=True)
+
+
+def install_pcam_bundle(bundle_path: Path, model_dir: Path, expected_sha256: str = "") -> None:
+    if expected_sha256:
+        actual = file_sha256(bundle_path)
+        if actual.lower() != expected_sha256.strip().lower():
+            raise RuntimeError(f"PCam model bundle SHA-256 mismatch: expected {expected_sha256}, received {actual}")
+
+    model_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(bundle_path) as bundle:
+        names = set(bundle.namelist())
+        missing = sorted(set(PCAM_REQUIRED_FILES) - names)
+        if missing:
+            raise RuntimeError(f"PCam model bundle is missing: {', '.join(missing)}")
+
+        config = json.loads(bundle.read("frozen_pcam_v1.json"))
+        model_name = config.get("model", {}).get("file")
+        if model_name != "nuclei_lens_pcam_v1.keras" or model_name not in names:
+            raise RuntimeError("PCam configuration does not reference the packaged Keras model")
+        if config.get("input", {}).get("shape") != [96, 96, 3]:
+            raise RuntimeError("PCam configuration must declare a 96x96 RGB input")
+        output = config.get("output", {})
+        required_thresholds = {"balanced_youden", "sensitivity_focused"}
+        missing_thresholds = required_thresholds - set(output.get("thresholds", {}))
+        if "temperature" not in output or missing_thresholds:
+            raise RuntimeError("PCam configuration is missing calibration or frozen thresholds")
+
+        temporary_paths = []
+        try:
+            for filename in PCAM_REQUIRED_FILES:
+                target = model_dir / filename
+                temporary = model_dir / f".{filename}.download"
+                with bundle.open(filename) as source, temporary.open("wb") as output_file:
+                    shutil.copyfileobj(source, output_file, length=1024 * 1024)
+                if temporary.stat().st_size == 0:
+                    raise RuntimeError(f"PCam model bundle contains an empty {filename}")
+                temporary_paths.append((temporary, target))
+            for temporary, target in temporary_paths:
+                try:
+                    os.replace(temporary, target)
+                except PermissionError:
                     shutil.copyfile(temporary, target)
                     temporary.unlink()
         finally:
@@ -154,4 +205,33 @@ def bootstrap_model(model_dir: Path) -> str:
         temporary_bundle.unlink(missing_ok=True)
     source = gcs_uri if gcs_uri else bundle_url
     return f"model bundle downloaded and installed from {source}"
+
+
+def bootstrap_pcam_model(model_dir: Path) -> str:
+    if all((model_dir / filename).is_file() for filename in PCAM_REQUIRED_FILES):
+        return "existing PCam model artifacts found"
+
+    gcs_uri = os.getenv("PCAM_MODEL_BUNDLE_GCS_URI", "").strip()
+    bundle_url = os.getenv("PCAM_MODEL_BUNDLE_URL", "").strip()
+    if not gcs_uri and not bundle_url:
+        return "PCam artifacts absent; metastatic-pattern analysis disabled"
+
+    maximum_mb = max(1, int(os.getenv("PCAM_MODEL_BUNDLE_MAX_MB", "512")))
+    model_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=model_dir, suffix=".zip", delete=False) as handle:
+        temporary_bundle = Path(handle.name)
+    try:
+        if gcs_uri:
+            download_gcs_bundle(gcs_uri, temporary_bundle, max_bytes=maximum_mb * 1024 * 1024)
+        else:
+            download_bundle(bundle_url, temporary_bundle, max_bytes=maximum_mb * 1024 * 1024)
+        install_pcam_bundle(
+            temporary_bundle,
+            model_dir,
+            expected_sha256=os.getenv("PCAM_MODEL_BUNDLE_SHA256", ""),
+        )
+    finally:
+        temporary_bundle.unlink(missing_ok=True)
+    source = gcs_uri if gcs_uri else bundle_url
+    return f"PCam model bundle downloaded and installed from {source}"
 

@@ -4,7 +4,13 @@ import zipfile
 
 import pytest
 
-from app.bootstrap import bootstrap_model, install_bundle, parse_gcs_uri
+from app.bootstrap import (
+    bootstrap_model,
+    bootstrap_pcam_model,
+    install_bundle,
+    install_pcam_bundle,
+    parse_gcs_uri,
+)
 
 
 CONFIG = {
@@ -20,6 +26,24 @@ def make_bundle(path):
     with zipfile.ZipFile(path, "w") as bundle:
         bundle.writestr("best_unet.weights.h5", b"test-weights")
         bundle.writestr("frozen_config.json", json.dumps(CONFIG))
+
+
+def make_pcam_bundle(path):
+    config = {
+        "model": {"file": "nuclei_lens_pcam_v1.keras"},
+        "input": {"shape": [96, 96, 3]},
+        "output": {
+            "temperature": 1.08,
+            "thresholds": {
+                "balanced_youden": 0.62,
+                "sensitivity_focused": 0.30,
+            },
+        },
+    }
+    with zipfile.ZipFile(path, "w") as bundle:
+        bundle.writestr("nuclei_lens_pcam_v1.keras", b"test-model")
+        bundle.writestr("frozen_pcam_v1.json", json.dumps(config))
+        bundle.writestr("manifest.json", json.dumps({"package_id": "pcam-v1"}))
 
 
 def test_install_bundle_atomically(tmp_path):
@@ -87,4 +111,22 @@ def test_bootstrap_prefers_private_gcs(tmp_path, monkeypatch):
     status = bootstrap_model(tmp_path / "model")
     assert "gs://nuclei-lenses/model.zip" in status
     assert (tmp_path / "model" / "best_unet.weights.h5").exists()
+
+
+def test_install_pcam_bundle(tmp_path):
+    bundle = tmp_path / "pcam.zip"
+    model_dir = tmp_path / "pcam-model"
+    make_pcam_bundle(bundle)
+    expected = hashlib.sha256(bundle.read_bytes()).hexdigest()
+
+    install_pcam_bundle(bundle, model_dir, expected)
+
+    assert (model_dir / "nuclei_lens_pcam_v1.keras").read_bytes() == b"test-model"
+    assert json.loads((model_dir / "frozen_pcam_v1.json").read_text())["input"]["shape"] == [96, 96, 3]
+
+
+def test_pcam_bootstrap_without_url_is_optional(tmp_path, monkeypatch):
+    monkeypatch.delenv("PCAM_MODEL_BUNDLE_URL", raising=False)
+    monkeypatch.delenv("PCAM_MODEL_BUNDLE_GCS_URI", raising=False)
+    assert "disabled" in bootstrap_pcam_model(tmp_path)
 

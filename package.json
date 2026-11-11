@@ -1,6 +1,6 @@
 {
   "name": "ai-interviewer",
-  "description": "Nuclei Lens: a MoNuSeg U-Net research project for H&E nuclei segmentation, watershed instance separation, and counting.",
+  "description": "Nuclei Lens: H&E nuclei segmentation, instance quantification, and calibrated PCam metastatic-pattern mapping.",
   "private": true,
   "scripts": {
     "build": "turbo run build",

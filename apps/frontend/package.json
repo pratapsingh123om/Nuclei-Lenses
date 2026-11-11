@@ -2,7 +2,7 @@
   "name": "@nuclei-lens/frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Interactive H&E nuclei segmentation, instance separation, and counting demo for the MoNuSeg U-Net project.",
+  "description": "Interactive H&E nuclei quantification and calibrated PCam metastatic-pattern mapping.",
   "type": "module",
   "scripts": {
     "dev": "vite",
